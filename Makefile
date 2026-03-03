@@ -36,16 +36,16 @@ logs:
 	docker compose logs -f
 
 init:
-	uv run src/utils/download_dataset.py
-	uv run src/preprocessing/preprocess.py
+	uv run --python 3.11 src/utils/download_dataset.py
+	uv run --python 3.11 src/preprocessing/preprocess.py
 
 train-%:
-	uv run src/models/$*.py
+	uv run --python 3.11 src/models/$*.py
 
 train-all:
 	@for model in $(MODELS); do \
 		echo "\n========== Training $$model =========="; \
-		uv run src/models/$$model.py; \
+		uv run --python 3.11 src/models/$$model.py; \
 	done
 
 clean:

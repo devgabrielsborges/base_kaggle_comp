@@ -13,7 +13,7 @@ from models.model import BaseModel
 class LogisticRegressionModel(BaseModel):
     def build_model(self, params: dict | None = None):
         params = params or {}
-        return LogisticRegression(**params)
+        return LogisticRegression(n_jobs=-1, **params)
 
     def suggest_params(self, trial: optuna.Trial) -> dict:
         return {

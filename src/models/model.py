@@ -43,6 +43,7 @@ class BaseModel(ABC):
         self.model = None
         self.best_params: dict | None = None
         self.n_trials = n_trials
+        self.task_type = os.getenv("TASK_TYPE", "classification")
         self.metric = METRIC
         self.scoring = SKLEARN_SCORING.get(self.metric, self.metric)
         self.direction = METRIC_DIRECTION.get(self.metric, "maximize")

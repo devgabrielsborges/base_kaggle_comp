@@ -15,3 +15,4 @@ def init_mlflow():
     experiment_name = f"{competition}/{target}"
 
     mlflow.set_experiment(experiment_name)
+    mlflow.enable_system_metrics_logging()

@@ -1,7 +1,7 @@
-FROM python:3.11-slim
+FROM python:3.12-slim
 
 RUN pip install --no-cache-dir \
-    "mlflow==2.13.2" \
+    "mlflow==3.0.0" \
     "alembic<2" \
     "sqlalchemy<2.1" \
     psycopg2-binary \

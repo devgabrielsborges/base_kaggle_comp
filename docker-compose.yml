@@ -64,6 +64,8 @@ services:
         --backend-store-uri postgresql://mlflow:mlflow@postgres:5432/mlflow
         --serve-artifacts
         --artifacts-destination s3://mlflow/
+        --default-artifact-root s3://mlflow/
+        --allowed-hosts "*"
     ports:
       - "5000:5000"
 

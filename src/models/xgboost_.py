@@ -11,6 +11,8 @@ from models.model import BaseModel
 
 
 class XGBoostModel(BaseModel):
+    model_name = "xgboost"
+
     def build_model(self, params: dict | None = None):
         params = params or {}
         if self.task_type == "regression":

@@ -12,6 +12,8 @@ from models.model import BaseModel
 
 
 class GradientBoostingModel(BaseModel):
+    model_name = "gradient_boosting"
+
     def build_model(self, params: dict | None = None):
         params = params or {}
         if self.task_type == "regression":

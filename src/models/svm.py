@@ -11,6 +11,8 @@ from models.model import BaseModel
 
 
 class SVMModel(BaseModel):
+    model_name = "svm"
+
     def build_model(self, params: dict | None = None):
         params = params or {}
         if self.task_type == "regression":

@@ -2,11 +2,15 @@ import os
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+import mlflow
+import mlflow.sklearn
 import numpy as np
 import optuna
 from dotenv import load_dotenv
 from sklearn.metrics import get_scorer
 from sklearn.model_selection import cross_val_score
+
+from config.mlflow_init import init_mlflow
 
 load_dotenv()
 
@@ -38,6 +42,8 @@ METRIC_DIRECTION = {
 
 
 class BaseModel(ABC):
+    model_name: str = "base_model"
+
     def __init__(self, data_dir: str = "data/processed", n_trials: int = 50):
         self.data_dir = Path(data_dir)
         self.model = None
@@ -47,6 +53,7 @@ class BaseModel(ABC):
         self.metric = METRIC
         self.scoring = SKLEARN_SCORING.get(self.metric, self.metric)
         self.direction = METRIC_DIRECTION.get(self.metric, "maximize")
+        init_mlflow()
 
     def load_data(self):
         X_train = np.load(self.data_dir / "X_train_preprocessed.npy", allow_pickle=True)
@@ -99,10 +106,26 @@ class BaseModel(ABC):
 
     def run(self):
         X_train, X_test, y_train, y_test = self.load_data()
-        self.optimize(X_train, y_train)
-        self.train(X_train, y_train)
-        y_pred = self.predict(X_test)
-        metrics = self.evaluate(y_test, y_pred)
-        for name, value in metrics.items():
-            print(f"Test {name}: {value:.4f}")
+
+        with mlflow.start_run(run_name=self.model_name):
+            mlflow.set_tag("model_type", self.model_name)
+            mlflow.set_tag("task_type", self.task_type)
+            mlflow.log_param("metric", self.metric)
+            mlflow.log_param("n_trials", self.n_trials)
+
+            study = self.optimize(X_train, y_train)
+
+            mlflow.log_params(self.best_params)
+            mlflow.log_metric(f"best_cv_{self.metric}", study.best_value)
+
+            self.train(X_train, y_train)
+            y_pred = self.predict(X_test)
+            metrics = self.evaluate(y_test, y_pred)
+
+            for name, value in metrics.items():
+                mlflow.log_metric(f"test_{name}", value)
+                print(f"Test {name}: {value:.4f}")
+
+            mlflow.sklearn.log_model(self.model, artifact_path="model")
+
         return metrics

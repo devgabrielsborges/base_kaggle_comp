@@ -9,21 +9,11 @@ import mlflow.sklearn
 import numpy as np
 import optuna
 from dotenv import load_dotenv
-from sklearn.metrics import (
-    ConfusionMatrixDisplay,
-    PrecisionRecallDisplay,
-    RocCurveDisplay,
-    accuracy_score,
-    f1_score,
-    log_loss,
-    mean_absolute_error,
-    mean_squared_error,
-    precision_score,
-    r2_score,
-    recall_score,
-    roc_auc_score,
-)
-from sklearn.metrics import get_scorer
+from sklearn.metrics import (ConfusionMatrixDisplay, PrecisionRecallDisplay,
+                             RocCurveDisplay, accuracy_score, f1_score,
+                             get_scorer, log_loss, mean_absolute_error,
+                             mean_squared_error, precision_score, r2_score,
+                             recall_score, roc_auc_score)
 from sklearn.model_selection import cross_val_score
 
 matplotlib.use("Agg")
@@ -63,10 +53,16 @@ METRIC_DIRECTION = {
 CLASSIFICATION_METRICS = {
     "accuracy": lambda y, p, **_: accuracy_score(y, p),
     "f1": lambda y, p, **_: f1_score(y, p, average="weighted"),
-    "precision": lambda y, p, **_: precision_score(y, p, average="weighted", zero_division=0),
+    "precision": lambda y, p, **_: precision_score(
+        y, p, average="weighted", zero_division=0
+    ),
     "recall": lambda y, p, **_: recall_score(y, p, average="weighted", zero_division=0),
-    "roc_auc": lambda y, p, proba=None, **_: roc_auc_score(y, proba) if proba is not None else None,
-    "log_loss": lambda y, p, proba=None, **_: log_loss(y, proba) if proba is not None else None,
+    "roc_auc": lambda y, p, proba=None, **_: (
+        roc_auc_score(y, proba) if proba is not None else None
+    ),
+    "log_loss": lambda y, p, proba=None, **_: (
+        log_loss(y, proba) if proba is not None else None
+    ),
 }
 
 REGRESSION_METRICS = {
@@ -193,9 +189,7 @@ class BaseModel(ABC):
         ax.set_xlabel("Actual")
         ax.set_ylabel("Predicted")
         ax.set_title(f"{self.model_name} — Predicted vs Actual")
-        fig.savefig(
-            plots_dir / "predicted_vs_actual.png", dpi=150, bbox_inches="tight"
-        )
+        fig.savefig(plots_dir / "predicted_vs_actual.png", dpi=150, bbox_inches="tight")
         plt.close(fig)
 
         residuals = y_true - y_pred
@@ -211,9 +205,7 @@ class BaseModel(ABC):
     def _log_optuna_plots(self, study, plots_dir: Path):
         try:
             from optuna.visualization.matplotlib import (
-                plot_optimization_history,
-                plot_param_importances,
-            )
+                plot_optimization_history, plot_param_importances)
 
             ax = plot_optimization_history(study)
             ax.figure.savefig(

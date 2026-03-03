@@ -15,13 +15,12 @@ class LogisticRegressionModel(BaseModel):
 
     def build_model(self, params: dict | None = None):
         params = params or {}
-        return LogisticRegression(n_jobs=-1, **params)
+        return LogisticRegression(solver="saga", penalty="elasticnet", **params)
 
     def suggest_params(self, trial: optuna.Trial) -> dict:
         return {
             "C": trial.suggest_float("C", 1e-4, 10.0, log=True),
             "l1_ratio": trial.suggest_float("l1_ratio", 0.0, 1.0),
-            "solver": "saga",
             "max_iter": trial.suggest_int("max_iter", 100, 1000, step=100),
         }
 

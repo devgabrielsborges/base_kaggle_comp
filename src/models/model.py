@@ -7,6 +7,17 @@ import mlflow.sklearn
 import numpy as np
 import optuna
 from dotenv import load_dotenv
+from sklearn.metrics import (
+    accuracy_score,
+    f1_score,
+    log_loss,
+    mean_absolute_error,
+    mean_squared_error,
+    precision_score,
+    r2_score,
+    recall_score,
+    roc_auc_score,
+)
 from sklearn.metrics import get_scorer
 from sklearn.model_selection import cross_val_score
 
@@ -15,6 +26,7 @@ from config.mlflow_init import init_mlflow
 load_dotenv()
 
 METRIC = os.getenv("METRIC", "accuracy")
+LOG_ALL_METRICS = os.getenv("LOG_ALL_METRICS", "False").lower() in ("true", "1", "yes")
 
 SKLEARN_SCORING = {
     "accuracy": "accuracy",
@@ -38,6 +50,21 @@ METRIC_DIRECTION = {
     "neg_mean_squared_error": "minimize",
     "neg_mean_absolute_error": "minimize",
     "neg_log_loss": "minimize",
+}
+
+CLASSIFICATION_METRICS = {
+    "accuracy": lambda y, p, **_: accuracy_score(y, p),
+    "f1": lambda y, p, **_: f1_score(y, p, average="weighted"),
+    "precision": lambda y, p, **_: precision_score(y, p, average="weighted", zero_division=0),
+    "recall": lambda y, p, **_: recall_score(y, p, average="weighted", zero_division=0),
+    "roc_auc": lambda y, p, proba=None, **_: roc_auc_score(y, proba) if proba is not None else None,
+    "log_loss": lambda y, p, proba=None, **_: log_loss(y, proba) if proba is not None else None,
+}
+
+REGRESSION_METRICS = {
+    "r2": lambda y, p, **_: r2_score(y, p),
+    "mse": lambda y, p, **_: mean_squared_error(y, p),
+    "mae": lambda y, p, **_: mean_absolute_error(y, p),
 }
 
 
@@ -99,7 +126,28 @@ class BaseModel(ABC):
             raise RuntimeError("Model has not been trained yet. Call train() first.")
         return self.model.predict(X)
 
-    def evaluate(self, y_true, y_pred) -> dict:
+    def _predict_proba(self, X):
+        if hasattr(self.model, "predict_proba"):
+            proba = self.model.predict_proba(X)
+            if proba.shape[1] == 2:
+                return proba[:, 1]
+            return proba
+        return None
+
+    def evaluate(self, y_true, y_pred, y_proba=None) -> dict:
+        if LOG_ALL_METRICS:
+            suite = (
+                CLASSIFICATION_METRICS
+                if self.task_type == "classification"
+                else REGRESSION_METRICS
+            )
+            results = {}
+            for name, fn in suite.items():
+                value = fn(y_true, y_pred, proba=y_proba)
+                if value is not None:
+                    results[name] = value
+            return results
+
         scorer = get_scorer(self.scoring)
         score = scorer._score_func(y_true, y_pred, **scorer._kwargs)
         return {self.metric: score}
@@ -120,7 +168,8 @@ class BaseModel(ABC):
 
             self.train(X_train, y_train)
             y_pred = self.predict(X_test)
-            metrics = self.evaluate(y_test, y_pred)
+            y_proba = self._predict_proba(X_test)
+            metrics = self.evaluate(y_test, y_pred, y_proba)
 
             for name, value in metrics.items():
                 mlflow.log_metric(f"test_{name}", value)

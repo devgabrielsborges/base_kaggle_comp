@@ -1,13 +1,18 @@
 import os
+import tempfile
 from abc import ABC, abstractmethod
 from pathlib import Path
 
+import matplotlib
 import mlflow
 import mlflow.sklearn
 import numpy as np
 import optuna
 from dotenv import load_dotenv
 from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    PrecisionRecallDisplay,
+    RocCurveDisplay,
     accuracy_score,
     f1_score,
     log_loss,
@@ -20,6 +25,9 @@ from sklearn.metrics import (
 )
 from sklearn.metrics import get_scorer
 from sklearn.model_selection import cross_val_score
+
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
 
 from config.mlflow_init import init_mlflow
 
@@ -152,6 +160,89 @@ class BaseModel(ABC):
         score = scorer._score_func(y_true, y_pred, **scorer._kwargs)
         return {self.metric: score}
 
+    def _log_classification_plots(self, y_true, y_pred, y_proba, plots_dir: Path):
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ConfusionMatrixDisplay.from_predictions(y_true, y_pred, ax=ax)
+        ax.set_title(f"{self.model_name} — Confusion Matrix")
+        fig.savefig(plots_dir / "confusion_matrix.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+        if y_proba is not None:
+            fig, ax = plt.subplots(figsize=(8, 6))
+            RocCurveDisplay.from_predictions(y_true, y_proba, ax=ax)
+            ax.set_title(f"{self.model_name} — ROC Curve")
+            fig.savefig(plots_dir / "roc_curve.png", dpi=150, bbox_inches="tight")
+            plt.close(fig)
+
+            fig, ax = plt.subplots(figsize=(8, 6))
+            PrecisionRecallDisplay.from_predictions(y_true, y_proba, ax=ax)
+            ax.set_title(f"{self.model_name} — Precision-Recall Curve")
+            fig.savefig(
+                plots_dir / "precision_recall_curve.png", dpi=150, bbox_inches="tight"
+            )
+            plt.close(fig)
+
+    def _log_regression_plots(self, y_true, y_pred, plots_dir: Path):
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.scatter(y_true, y_pred, alpha=0.5, edgecolors="k", linewidths=0.3)
+        limits = [
+            min(y_true.min(), y_pred.min()),
+            max(y_true.max(), y_pred.max()),
+        ]
+        ax.plot(limits, limits, "r--", linewidth=2)
+        ax.set_xlabel("Actual")
+        ax.set_ylabel("Predicted")
+        ax.set_title(f"{self.model_name} — Predicted vs Actual")
+        fig.savefig(
+            plots_dir / "predicted_vs_actual.png", dpi=150, bbox_inches="tight"
+        )
+        plt.close(fig)
+
+        residuals = y_true - y_pred
+        fig, ax = plt.subplots(figsize=(8, 6))
+        ax.scatter(y_pred, residuals, alpha=0.5, edgecolors="k", linewidths=0.3)
+        ax.axhline(y=0, color="r", linestyle="--", linewidth=2)
+        ax.set_xlabel("Predicted")
+        ax.set_ylabel("Residuals")
+        ax.set_title(f"{self.model_name} — Residuals")
+        fig.savefig(plots_dir / "residuals.png", dpi=150, bbox_inches="tight")
+        plt.close(fig)
+
+    def _log_optuna_plots(self, study, plots_dir: Path):
+        try:
+            from optuna.visualization.matplotlib import (
+                plot_optimization_history,
+                plot_param_importances,
+            )
+
+            ax = plot_optimization_history(study)
+            ax.figure.savefig(
+                plots_dir / "optimization_history.png", dpi=150, bbox_inches="tight"
+            )
+            plt.close(ax.figure)
+
+            if len(study.trials) > 1:
+                ax = plot_param_importances(study)
+                ax.figure.savefig(
+                    plots_dir / "param_importances.png", dpi=150, bbox_inches="tight"
+                )
+                plt.close(ax.figure)
+        except Exception:
+            pass
+
+    def _log_plots(self, y_true, y_pred, y_proba, study):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            plots_dir = Path(tmpdir)
+
+            if self.task_type == "classification":
+                self._log_classification_plots(y_true, y_pred, y_proba, plots_dir)
+            else:
+                self._log_regression_plots(y_true, y_pred, plots_dir)
+
+            self._log_optuna_plots(study, plots_dir)
+
+            mlflow.log_artifacts(str(plots_dir), artifact_path="plots")
+
     def run(self):
         X_train, X_test, y_train, y_test = self.load_data()
 
@@ -176,5 +267,6 @@ class BaseModel(ABC):
                 print(f"Test {name}: {value:.4f}")
 
             mlflow.sklearn.log_model(self.model, artifact_path="model")
+            self._log_plots(y_test, y_pred, y_proba, study)
 
         return metrics

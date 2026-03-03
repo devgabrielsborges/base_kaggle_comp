@@ -65,6 +65,8 @@ services:
         --serve-artifacts
         --artifacts-destination s3://mlflow/
         --default-artifact-root s3://mlflow/
+        --allowed-hosts '*'
+        --cors-allowed-origins '*'
     ports:
       - "5000:5000"
 

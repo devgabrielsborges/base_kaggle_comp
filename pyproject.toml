@@ -16,5 +16,6 @@ dependencies = [
     "python-dotenv>=1.2.2",
     "scikit-learn>=1.8.0",
     "scipy>=1.17.1",
+    "setuptools>=69.0.0",
     "xgboost>=3.2.0",
 ]

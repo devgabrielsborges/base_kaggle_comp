@@ -15,6 +15,12 @@ class SVMModel(BaseModel):
 
     def build_model(self, params: dict | None = None):
         params = params or {}
+        # Set default max_iter to prevent infinite runs
+        if "max_iter" not in params:
+            params["max_iter"] = 10000
+        # Increase cache size for better performance
+        if "cache_size" not in params:
+            params["cache_size"] = 1000
         if self.task_type == "regression":
             return SVR(**params)
         return SVC(**params)
@@ -24,6 +30,8 @@ class SVMModel(BaseModel):
         params = {
             "C": trial.suggest_float("C", 1e-3, 100.0, log=True),
             "kernel": kernel,
+            "max_iter": trial.suggest_int("max_iter", 1000, 10000),
+            "tol": trial.suggest_float("tol", 1e-4, 1e-2, log=True),
         }
         if kernel == "rbf" or kernel == "poly":
             params["gamma"] = trial.suggest_categorical("gamma", ["scale", "auto"])

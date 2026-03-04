@@ -36,15 +36,19 @@ logs:
 	docker compose logs -f
 
 init:
+	@set -a && [ -f .env ] && . ./.env && set +a; \
 	uv run --python 3.11 src/utils/download_dataset.py
+	@set -a && [ -f .env ] && . ./.env && set +a; \
 	uv run --python 3.11 src/preprocessing/preprocess.py
 
 train-%:
+	@set -a && [ -f .env ] && . ./.env && set +a; \
 	uv run --python 3.11 src/models/$*.py
 
 train-all:
 	@for model in $(MODELS); do \
 		echo "\n========== Training $$model =========="; \
+		set -a && [ -f .env ] && . ./.env && set +a; \
 		uv run --python 3.11 src/models/$$model.py; \
 	done
 

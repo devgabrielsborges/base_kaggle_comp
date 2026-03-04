@@ -9,11 +9,21 @@ import mlflow.sklearn
 import numpy as np
 import optuna
 from dotenv import load_dotenv
-from sklearn.metrics import (ConfusionMatrixDisplay, PrecisionRecallDisplay,
-                             RocCurveDisplay, accuracy_score, f1_score,
-                             get_scorer, log_loss, mean_absolute_error,
-                             mean_squared_error, precision_score, r2_score,
-                             recall_score, roc_auc_score)
+from sklearn.metrics import (
+    ConfusionMatrixDisplay,
+    PrecisionRecallDisplay,
+    RocCurveDisplay,
+    accuracy_score,
+    f1_score,
+    get_scorer,
+    log_loss,
+    mean_absolute_error,
+    mean_squared_error,
+    precision_score,
+    r2_score,
+    recall_score,
+    roc_auc_score,
+)
 from sklearn.model_selection import cross_val_score
 
 matplotlib.use("Agg")
@@ -164,14 +174,22 @@ class BaseModel(ABC):
         plt.close(fig)
 
         if y_proba is not None:
+            # Detect positive label for string/non-binary targets
+            unique_labels = np.unique(y_true)
+            pos_label = unique_labels[-1] if len(unique_labels) == 2 else None
+
             fig, ax = plt.subplots(figsize=(8, 6))
-            RocCurveDisplay.from_predictions(y_true, y_proba, ax=ax)
+            RocCurveDisplay.from_predictions(
+                y_true, y_proba, ax=ax, pos_label=pos_label
+            )
             ax.set_title(f"{self.model_name} — ROC Curve")
             fig.savefig(plots_dir / "roc_curve.png", dpi=150, bbox_inches="tight")
             plt.close(fig)
 
             fig, ax = plt.subplots(figsize=(8, 6))
-            PrecisionRecallDisplay.from_predictions(y_true, y_proba, ax=ax)
+            PrecisionRecallDisplay.from_predictions(
+                y_true, y_proba, ax=ax, pos_label=pos_label
+            )
             ax.set_title(f"{self.model_name} — Precision-Recall Curve")
             fig.savefig(
                 plots_dir / "precision_recall_curve.png", dpi=150, bbox_inches="tight"
@@ -205,7 +223,9 @@ class BaseModel(ABC):
     def _log_optuna_plots(self, study, plots_dir: Path):
         try:
             from optuna.visualization.matplotlib import (
-                plot_optimization_history, plot_param_importances)
+                plot_optimization_history,
+                plot_param_importances,
+            )
 
             ax = plot_optimization_history(study)
             ax.figure.savefig(

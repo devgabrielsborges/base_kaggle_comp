@@ -30,8 +30,9 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
 from config.mlflow_init import init_mlflow
+from utils.generate_submission_file import generate_submission_file
 
-load_dotenv()
+load_dotenv(override=True)
 
 METRIC = os.getenv("METRIC", "accuracy")
 LOG_ALL_METRICS = os.getenv("LOG_ALL_METRICS", "False").lower() in ("true", "1", "yes")
@@ -242,6 +243,32 @@ class BaseModel(ABC):
         except Exception:
             pass
 
+    def _generate_and_log_submission(self):
+        submission_path = self.data_dir / "X_submission_preprocessed.npy"
+        if not submission_path.exists():
+            print("Skipping submission: X_submission_preprocessed.npy not found")
+            return
+
+        raw_dir = Path(os.getenv("DATA_RAW_DIR", "data/raw"))
+        test_csv = raw_dir / "test.csv"
+        if not test_csv.exists():
+            print("Skipping submission: test.csv not found")
+            return
+
+        X_sub = np.load(submission_path, allow_pickle=True)
+        predictions = self.predict(X_sub)
+
+        target_column = os.getenv("TARGET_COLUMN", "target")
+        output_path = generate_submission_file(
+            predictions=predictions,
+            model_name=self.model_name,
+            test_csv_path=test_csv,
+            target_column=target_column,
+        )
+
+        mlflow.log_artifact(str(output_path), artifact_path="submissions")
+        print(f"Submission logged: {output_path.name}")
+
     def _log_plots(self, y_true, y_pred, y_proba, study):
         with tempfile.TemporaryDirectory() as tmpdir:
             plots_dir = Path(tmpdir)
@@ -280,5 +307,6 @@ class BaseModel(ABC):
 
             mlflow.sklearn.log_model(self.model, artifact_path="model")
             self._log_plots(y_test, y_pred, y_proba, study)
+            self._generate_and_log_submission()
 
         return metrics

@@ -3,7 +3,10 @@ import os
 import mlflow
 from dotenv import load_dotenv
 
-load_dotenv()
+load_dotenv(override=True)
+
+for token_var in ("AWS_SESSION_TOKEN", "AWS_SECURITY_TOKEN"):
+    os.environ.pop(token_var, None)
 
 
 def init_mlflow():

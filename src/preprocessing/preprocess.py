@@ -19,8 +19,10 @@ from sklearn.preprocessing import OneHotEncoder, StandardScaler
 
 def preprocess_data(data: pd.DataFrame, target_column: str | None = None):
     target_column = target_column or os.getenv("TARGET_COLUMN")
-    X = data.drop(columns=[target_column])
-    y = data[target_column]
+    id_column = os.getenv("ID_COLUMN", "id")
+    # FIXME add data transformation here if needed
+    X = data.drop(columns=[target_column, id_column], errors="ignore")
+    y = data[target_column].map({"Presence": 1, "Absence": 0}).astype("uint8")
 
     numerical_columns = X.select_dtypes(include=["int64", "float64"]).columns
     categorical_columns = X.select_dtypes(
@@ -70,9 +72,25 @@ def preprocess_data(data: pd.DataFrame, target_column: str | None = None):
     np.save(output_dir / "y_train.npy", y_train.values)
     np.save(output_dir / "y_test.npy", y_test.values)
 
+    raw_dir = Path(os.getenv("DATA_RAW_DIR", "data/raw"))
+    submission_test_path = raw_dir / "test.csv"
+    if submission_test_path.exists():
+        submission_data = pd.read_csv(submission_test_path)
+        X_submission = submission_data.drop(
+            columns=[target_column], errors="ignore"
+        )
+        X_submission_features = X_submission.drop(columns=[id_column], errors="ignore")
+        X_submission_preprocessed = preprocessor.transform(X_submission_features)
+        X_sub_out = (
+            X_submission_preprocessed.toarray()
+            if sparse.issparse(X_submission_preprocessed)
+            else X_submission_preprocessed
+        )
+        np.save(output_dir / "X_submission_preprocessed.npy", X_sub_out)
+
 
 if __name__ == "__main__":
-    load_dotenv()
+    load_dotenv(override=True)
     data = pd.read_csv(Path(os.getenv("DATA_RAW_DIR", "data/raw")) / "train.csv")
     preprocess_data(data)
     print("Data preprocessed successfully")

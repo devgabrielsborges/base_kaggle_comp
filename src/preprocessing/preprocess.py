@@ -22,6 +22,7 @@ def preprocess_data(data: pd.DataFrame, target_column: str | None = None):
     id_column = os.getenv("ID_COLUMN", "id")
     # FIXME add data transformation here if needed
     X = data.drop(columns=[target_column, id_column], errors="ignore")
+    # FIXME change it as needed
     y = data[target_column].map({"Presence": 1, "Absence": 0}).astype("uint8")
 
     numerical_columns = X.select_dtypes(include=["int64", "float64"]).columns

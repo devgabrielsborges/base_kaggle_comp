@@ -77,9 +77,7 @@ def preprocess_data(data: pd.DataFrame, target_column: str | None = None):
     submission_test_path = raw_dir / "test.csv"
     if submission_test_path.exists():
         submission_data = pd.read_csv(submission_test_path)
-        X_submission = submission_data.drop(
-            columns=[target_column], errors="ignore"
-        )
+        X_submission = submission_data.drop(columns=[target_column], errors="ignore")
         X_submission_features = X_submission.drop(columns=[id_column], errors="ignore")
         X_submission_preprocessed = preprocessor.transform(X_submission_features)
         X_sub_out = (

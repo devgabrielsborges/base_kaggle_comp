@@ -1,23 +1,20 @@
 import sys
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parent.parent
+ROOT_DIR = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROOT_DIR))
 
 import optuna
-from sklearn.ensemble import (GradientBoostingClassifier,
-                              GradientBoostingRegressor)
+from sklearn.ensemble import GradientBoostingClassifier
 
 from models.model import BaseModel
 
 
-class GradientBoostingModel(BaseModel):
-    model_name = "gradient_boosting"
+class GradientBoostingClassifierModel(BaseModel):
+    model_name = "gradient_boosting_classifier"
 
     def build_model(self, params: dict | None = None):
         params = params or {}
-        if self.task_type == "regression":
-            return GradientBoostingRegressor(**params)
         return GradientBoostingClassifier(**params)
 
     def suggest_params(self, trial: optuna.Trial) -> dict:
@@ -32,4 +29,4 @@ class GradientBoostingModel(BaseModel):
 
 
 if __name__ == "__main__":
-    GradientBoostingModel().run()
+    GradientBoostingClassifierModel().run()

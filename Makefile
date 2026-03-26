@@ -21,10 +21,7 @@ help:
 	@echo "Available models: $(MODELS)"
 
 up:
-	docker compose up -d --build
-	@echo ""
-	@echo "MLflow UI:      http://localhost:5000"
-	@echo "MinIO Console:  http://localhost:9001  (minioadmin / minioadmin)"
+	@bash scripts/up.sh
 
 down:
 	docker compose down

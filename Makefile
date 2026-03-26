@@ -1,5 +1,3 @@
-MODELS := logistic_regression random_forest svm xgboost_ gradient_boosting knn
-
 .PHONY: help up down restart logs preprocess download train-% train-all clean
 
 help:
@@ -14,11 +12,15 @@ help:
 	@echo "  make download       Download dataset from Kaggle"
 	@echo "  make preprocess     Run preprocessing pipeline"
 	@echo ""
-	@echo "Training"
+	@echo "Training (TASK_TYPE inferred from .env)"
 	@echo "  make train-<model>  Train a single model (e.g. make train-random_forest)"
-	@echo "  make train-all      Train all models sequentially"
+	@echo "  make train-all      Train all models for the current TASK_TYPE"
 	@echo ""
-	@echo "Available models: $(MODELS)"
+	@set -a && [ -f .env ] && . ./.env && set +a; \
+	echo "TASK_TYPE=$$TASK_TYPE  —  available models:"; \
+	for f in src/models/$$TASK_TYPE/*.py; do \
+		printf "  %s\n" "$$(basename $$f .py)"; \
+	done
 
 up:
 	@bash scripts/up.sh
@@ -40,13 +42,14 @@ init:
 
 train-%:
 	@set -a && [ -f .env ] && . ./.env && set +a; \
-	uv run --python 3.11 src/models/$*.py
+	uv run --python 3.11 src/models/$$TASK_TYPE/$*.py
 
 train-all:
-	@for model in $(MODELS); do \
+	@set -a && [ -f .env ] && . ./.env && set +a; \
+	for f in src/models/$$TASK_TYPE/*.py; do \
+		model=$$(basename "$$f" .py); \
 		echo "\n========== Training $$model =========="; \
-		set -a && [ -f .env ] && . ./.env && set +a; \
-		uv run --python 3.11 src/models/$$model.py; \
+		uv run --python 3.11 "$$f"; \
 	done
 
 clean:
